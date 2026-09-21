@@ -1,5 +1,6 @@
 import { BOOKS } from "../data/books";
 import { generateSpineBar } from "../cover";
+import { setPendingOrigin } from "../router";
 
 export function renderHome(container: HTMLElement): () => void {
   container.innerHTML = `
@@ -36,6 +37,16 @@ export function renderHome(container: HTMLElement): () => void {
     canvas.className = "spine-canvas";
     link.style.setProperty("--accent", accent);
     link.appendChild(canvas);
+
+    link.addEventListener("click", (e) => {
+      // Let modified clicks (new tab, etc.) behave normally — only animate a plain click.
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+        return;
+      }
+      e.preventDefault();
+      setPendingOrigin(book.slug, link.getBoundingClientRect());
+      location.hash = `/book/${book.slug}`;
+    });
 
     li.appendChild(link);
     shelf.appendChild(li);

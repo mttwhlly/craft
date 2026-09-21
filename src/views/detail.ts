@@ -1,17 +1,27 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { BOOKS, type Book } from "../data/books";
-import { generateCover, pagesTexture, toTexture } from "../cover";
+import { createBookMesh, REST_ROTATION } from "../bookMesh";
 
-const DIMS = { width: 2.6, height: 3.4, depth: 0.46 };
+export interface DetailShell {
+  stage: HTMLDivElement;
+  canvas: HTMLCanvasElement;
+  reshuffleBtn: HTMLButtonElement;
+  copy: HTMLDivElement;
+}
 
-export function renderDetail(container: HTMLElement, book: Book): () => void {
+/** Mounts the detail view's DOM only — no WebGL yet. Lets callers measure `.stage` before the scene spins up. */
+export function mountDetailShell(
+  container: HTMLElement,
+  book: Book,
+  opts: { fadeInCopy?: boolean } = {},
+): DetailShell {
   container.innerHTML = `
     <div class="stage" id="stage">
       <canvas id="scene"></canvas>
       <div class="stage-hint">drag to tilt</div>
     </div>
-    <div class="copy">
+    <div class="copy${opts.fadeInCopy ? " copy-hidden" : ""}" id="copy">
       <p class="kicker">Craft Press &middot; No. ${String(
         BOOKS.findIndex((b) => b.slug === book.slug) + 1,
       ).padStart(2, "0")}</p>
@@ -32,9 +42,24 @@ export function renderDetail(container: HTMLElement, book: Book): () => void {
     </div>
   `;
 
-  const stage = container.querySelector("#stage") as HTMLDivElement;
-  const canvas = container.querySelector("#scene") as HTMLCanvasElement;
-  const reshuffleBtn = container.querySelector("#regenerate") as HTMLButtonElement;
+  return {
+    stage: container.querySelector("#stage") as HTMLDivElement,
+    canvas: container.querySelector("#scene") as HTMLCanvasElement,
+    reshuffleBtn: container.querySelector("#regenerate") as HTMLButtonElement,
+    copy: container.querySelector("#copy") as HTMLDivElement,
+  };
+}
+
+/** Fades in a shell's copy panel (used after a flight animation hands off to the live scene). */
+export function revealCopy(copy: HTMLElement) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => copy.classList.remove("copy-hidden"));
+  });
+}
+
+/** Boots the three.js scene into an already-mounted shell. Returns a dispose function. */
+export function initDetailScene(shell: DetailShell, book: Book): () => void {
+  const { stage, canvas, reshuffleBtn } = shell;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -60,90 +85,16 @@ export function renderDetail(container: HTMLElement, book: Book): () => void {
   scene.add(new THREE.AmbientLight(0x404050, 0.6));
 
   let seed = book.seed;
-  const pagesCanvas = pagesTexture();
-  const pagesTex = toTexture(pagesCanvas, true);
-  pagesTex.rotation = Math.PI / 2;
-
-  const disposables: { dispose: () => void }[] = [];
-
-  function buildMaterials(currentSeed: number) {
-    const cover = generateCover(currentSeed, book.title, book.author);
-    const colorTex = toTexture(cover.colorCanvas);
-    const bumpTex = toTexture(cover.bumpCanvas, true);
-    const metalTex = toTexture(cover.metalnessCanvas, true);
-    const spineTex = toTexture(cover.spineCanvas);
-
-    const frontMat = new THREE.MeshStandardMaterial({
-      map: colorTex,
-      bumpMap: bumpTex,
-      bumpScale: 0.012,
-      metalnessMap: metalTex,
-      metalness: 1,
-      roughness: 0.55,
-    });
-    const backMat = new THREE.MeshStandardMaterial({
-      map: colorTex,
-      roughness: 0.75,
-      metalness: 0.05,
-    });
-    const spineMat = new THREE.MeshStandardMaterial({
-      map: spineTex,
-      roughness: 0.6,
-      metalness: 0.3,
-    });
-    const pageMat = new THREE.MeshStandardMaterial({
-      map: pagesTex,
-      roughness: 0.95,
-      metalness: 0,
-    });
-
-    disposables.push(
-      colorTex,
-      bumpTex,
-      metalTex,
-      spineTex,
-      frontMat,
-      backMat,
-      spineMat,
-      pageMat,
-    );
-
-    return { frontMat, backMat, spineMat, pageMat, accent: cover.accent };
-  }
-
-  const geometry = new THREE.BoxGeometry(DIMS.width, DIMS.height, DIMS.depth, 1, 1, 1);
-  let materials = buildMaterials(seed);
-  const book3d = new THREE.Mesh(geometry, [
-    materials.pageMat,
-    materials.spineMat,
-    materials.pageMat,
-    materials.pageMat,
-    materials.frontMat,
-    materials.backMat,
-  ]);
-  book3d.rotation.y = -0.55;
-  book3d.rotation.x = 0.06;
+  const { mesh: book3d, reshuffle, disposeAll, accent: initialAccent } = createBookMesh(book, seed);
   scene.add(book3d);
-
-  function applyMaterials() {
-    book3d.material = [
-      materials.pageMat,
-      materials.spineMat,
-      materials.pageMat,
-      materials.pageMat,
-      materials.frontMat,
-      materials.backMat,
-    ];
-  }
 
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
   let velX = 0;
   let velY = 0;
-  const baseRotation = { x: 0.06, y: -0.55 };
-  const rotation = { x: baseRotation.x, y: baseRotation.y };
-  const targetRotation = { x: baseRotation.x, y: baseRotation.y };
+  const rotation = { x: REST_ROTATION.x, y: REST_ROTATION.y };
+  const targetRotation = { x: REST_ROTATION.x, y: REST_ROTATION.y };
   let idleT = 0;
 
   function pointerDown(e: PointerEvent) {
@@ -177,12 +128,11 @@ export function renderDetail(container: HTMLElement, book: Book): () => void {
 
   function onReshuffle() {
     seed = Math.floor(Math.random() * 1_000_000);
-    materials = buildMaterials(seed);
-    applyMaterials();
-    stage.style.setProperty("--accent", materials.accent);
+    const accent = reshuffle(seed);
+    stage.style.setProperty("--accent", accent);
   }
   reshuffleBtn.addEventListener("click", onReshuffle);
-  stage.style.setProperty("--accent", materials.accent);
+  stage.style.setProperty("--accent", initialAccent);
 
   function resize() {
     const rect = stage.getBoundingClientRect();
@@ -208,10 +158,10 @@ export function renderDetail(container: HTMLElement, book: Book): () => void {
       idleT += 0.004;
       targetRotation.y = THREE.MathUtils.lerp(
         targetRotation.y,
-        baseRotation.y + Math.sin(idleT) * 0.12,
+        REST_ROTATION.y + Math.sin(idleT) * 0.12,
         0.01,
       );
-      targetRotation.x = THREE.MathUtils.lerp(targetRotation.x, baseRotation.x, 0.01);
+      targetRotation.x = THREE.MathUtils.lerp(targetRotation.x, REST_ROTATION.x, 0.01);
     }
 
     rotation.x = THREE.MathUtils.lerp(rotation.x, targetRotation.x, 0.12);
@@ -231,13 +181,17 @@ export function renderDetail(container: HTMLElement, book: Book): () => void {
     canvas.removeEventListener("pointerup", pointerUp);
     canvas.removeEventListener("pointercancel", pointerUp);
     reshuffleBtn.removeEventListener("click", onReshuffle);
-    geometry.dispose();
-    disposables.forEach((d) => d.dispose());
+    disposeAll();
     envTex.dispose();
     pmrem.dispose();
-    pagesTex.dispose();
     renderer.dispose();
   };
+}
+
+/** Convenience: mount + boot in one call, for direct loads / back-forward nav with no flight animation. */
+export function renderDetail(container: HTMLElement, book: Book): () => void {
+  const shell = mountDetailShell(container, book);
+  return initDetailScene(shell, book);
 }
 
 function escapeHtml(s: string): string {
