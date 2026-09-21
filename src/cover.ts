@@ -207,6 +207,44 @@ export function generateCover(
   return { colorCanvas, bumpCanvas, metalnessCanvas, spineCanvas, accent: palette.accent };
 }
 
+/** The short horizontal "spine" bar used on the shelf/home view. */
+export function generateSpineBar(
+  seed: number,
+  title: string,
+  author: string,
+  w = 1000,
+  h = 120,
+): { canvas: HTMLCanvasElement; accent: string } {
+  const rand = mulberry32(seed);
+  const palette = PALETTES[Math.floor(rand() * PALETTES.length) % PALETTES.length];
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  drawFlowField(ctx, w, h, rand, palette);
+
+  const authorSize = h * 0.16;
+  const titleSize = h * 0.22;
+  const marginX = w * 0.045;
+
+  ctx.textBaseline = "middle";
+  ctx.font = `italic 400 ${authorSize}px Georgia, serif`;
+  ctx.fillStyle = hexAlpha(palette.ink, 0.88);
+  ctx.fillText(author, marginX, h * 0.52, w * 0.3);
+
+  ctx.font = `500 ${titleSize}px Georgia, serif`;
+  ctx.fillStyle = palette.accent;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.4)";
+  ctx.shadowBlur = titleSize * 0.08;
+  const titleWidth = ctx.measureText(title).width;
+  ctx.fillText(title, w / 2 - titleWidth / 2, h * 0.52);
+  ctx.restore();
+
+  return { canvas, accent: palette.accent };
+}
+
 export function pagesTexture(w = 256, h = 1400): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = w;

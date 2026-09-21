@@ -48,6 +48,12 @@ body {
   border-radius: 8px;
 }
 
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
 .topnav a {
   color: var(--ink-dim);
   text-decoration: none;
@@ -57,6 +63,19 @@ body {
 
 .topnav a.active {
   color: var(--ink);
+}
+
+.topnav .back-link {
+  color: var(--ink-dim);
+  transition: color 0.2s ease;
+}
+
+.topnav .back-link:hover {
+  color: var(--gold);
+}
+
+.mark-link {
+  text-decoration: none;
 }
 
 .layout {
@@ -107,7 +126,7 @@ body {
   opacity: 0.7;
 }
 
-.copy .kicker {
+.kicker {
   color: var(--accent, var(--gold));
   font-size: 13px;
   letter-spacing: 0.14em;
@@ -115,11 +134,12 @@ body {
   margin: 0 0 10px;
 }
 
-.copy h1 {
+.copy h1,
+.shelf-intro h1 {
   font-family: var(--serif);
   font-weight: 500;
-  font-size: clamp(38px, 5.4vw, 64px);
-  line-height: 1.02;
+  font-size: clamp(32px, 4.6vw, 52px);
+  line-height: 1.05;
   margin: 0 0 16px;
 }
 
@@ -170,6 +190,12 @@ body {
   color: #1c1a24;
 }
 
+.fineprint {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  font-style: italic;
+}
+
 .foot {
   text-align: center;
   margin-top: 32px;
@@ -184,5 +210,91 @@ body {
   }
   .stage {
     aspect-ratio: 1 / 1;
+  }
+}
+
+/* --- Home / shelf view --- */
+
+.layout-home {
+  display: block;
+  max-width: 860px;
+}
+
+.shelf-intro {
+  margin-bottom: clamp(24px, 5vh, 48px);
+}
+
+.shelf-intro .byline {
+  max-width: 46ch;
+}
+
+.shelf-wrap {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.tick-nav {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 40vh;
+  padding-top: 6px;
+}
+
+.tick {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(239, 233, 221, 0.18);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.tick-active {
+  background: var(--gold);
+  transform: scale(1.4);
+}
+
+.shelf {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.spine {
+  min-width: 0;
+}
+
+.spine-link {
+  display: block;
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.spine-link:hover,
+.spine-link:focus-visible {
+  transform: translateX(6px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--accent, var(--gold));
+  outline: none;
+}
+
+.spine-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (min-width: 680px) {
+  .tick-nav {
+    display: flex;
   }
 }
