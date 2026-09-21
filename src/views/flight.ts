@@ -4,13 +4,16 @@ import type { Book } from "../data/books";
 import { createBookMesh, BOOK_DIMS, REST_ROTATION } from "../bookMesh";
 
 const DURATION = 780;
-// Steep tilt so the book reads as a thin, wide bar at the start — matching
-// the shelf's foreshortened "looking down at a stack" spine bars — before
-// rotating up into the resting 3/4 view that shows the front cover. Y starts
-// at 0 (not REST_ROTATION.y): combining a large X tilt with *any* nonzero Y
-// produces an apparent diagonal roll under Euler composition, so the yaw is
-// introduced gradually as the tilt eases off, not held constant through it.
-const START_ROTATION = { x: 1.3, y: 0 };
+// Tilted so the book reads as a foreshortened spine-like bar at the start —
+// matching the shelf's flat spine bars — before rotating up into the resting
+// 3/4 view that shows the front cover. Kept under ~0.785 (45°) on purpose:
+// past that point the top face (pages) becomes more camera-facing than the
+// front cover, which reads as the book flashing open to show its page edge
+// instead of smoothly opening from spine to cover. Y starts at 0 (not
+// REST_ROTATION.y): combining a large X tilt with *any* nonzero Y produces an
+// apparent diagonal roll under Euler composition, so the yaw is introduced
+// gradually as the tilt eases off, not held constant through it.
+const START_ROTATION = { x: 0.6, y: 0 };
 
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -71,23 +74,35 @@ export function flyBookToStage(book: Book, originRect: DOMRect, targetRect: DOMR
     }
 
     /**
-     * Projected pixel width of the mesh's full width, at scale 1, for fitting
-     * the start size. Width (not height) is the stable dimension to fit
-     * against here: at a steep X tilt the projected height collapses toward
-     * zero, which would blow up a height-based scale fit.
+     * Projected pixel width of the mesh's screen-space bounding box, at scale 1,
+     * for fitting the start size. Measured across all 8 box corners (not just
+     * the mid-height/mid-depth line) because at the steep START_ROTATION tilt,
+     * the top/bottom edges swing far forward/back in Z, so perspective makes
+     * them noticeably wider or narrower on screen than that center line alone.
      */
     function projectedWidthAt(pos: THREE.Vector3, rot: { x: number; y: number }): number {
       mesh.position.copy(pos);
       mesh.rotation.set(rot.x, rot.y, 0);
       mesh.scale.setScalar(1);
       mesh.updateMatrixWorld(true);
-      const left = new THREE.Vector3(-BOOK_DIMS.width / 2, 0, 0)
-        .applyMatrix4(mesh.matrixWorld)
-        .project(camera);
-      const right = new THREE.Vector3(BOOK_DIMS.width / 2, 0, 0)
-        .applyMatrix4(mesh.matrixWorld)
-        .project(camera);
-      return (Math.abs(right.x - left.x) / 2) * w;
+      let minX = Infinity;
+      let maxX = -Infinity;
+      for (const sx of [-1, 1]) {
+        for (const sy of [-1, 1]) {
+          for (const sz of [-1, 1]) {
+            const corner = new THREE.Vector3(
+              (sx * BOOK_DIMS.width) / 2,
+              (sy * BOOK_DIMS.height) / 2,
+              (sz * BOOK_DIMS.depth) / 2,
+            )
+              .applyMatrix4(mesh.matrixWorld)
+              .project(camera);
+            minX = Math.min(minX, corner.x);
+            maxX = Math.max(maxX, corner.x);
+          }
+        }
+      }
+      return ((maxX - minX) / 2) * w;
     }
 
     const startPos = screenToWorld(

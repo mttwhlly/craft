@@ -5,11 +5,11 @@ import { flyBookToStage } from "./views/flight";
 
 type Cleanup = (() => void) | void;
 
-const pendingOrigins = new Map<string, DOMRect>();
+const pendingOrigins = new Map<string, { rect: DOMRect; scrollY: number }>();
 
 /** Called by the shelf just before it navigates, so the router can fly the clicked spine into place. */
 export function setPendingOrigin(slug: string, rect: DOMRect) {
-  pendingOrigins.set(slug, rect);
+  pendingOrigins.set(slug, { rect, scrollY: window.scrollY });
 }
 
 export function initRouter(view: HTMLElement, backLink: HTMLAnchorElement) {
@@ -30,12 +30,23 @@ export function initRouter(view: HTMLElement, backLink: HTMLAnchorElement) {
         backLink.hidden = false;
         view.className = "layout";
 
-        const origin = pendingOrigins.get(book.slug);
+        const pending = pendingOrigins.get(book.slug);
         pendingOrigins.delete(book.slug);
 
-        if (origin) {
+        if (pending) {
           const shell = mountDetailShell(view, book, { fadeInCopy: true });
           const targetRect = shell.stage.getBoundingClientRect();
+          // Mounting the (usually much shorter) detail layout can force the browser to
+          // clamp scrollY before this line runs, invalidating the origin rect captured
+          // on the old, taller shelf page. Re-express it in the post-clamp scroll frame
+          // so the flight still starts from the spine's true on-screen position.
+          const scrollDelta = pending.scrollY - window.scrollY;
+          const origin = new DOMRect(
+            pending.rect.left,
+            pending.rect.top + scrollDelta,
+            pending.rect.width,
+            pending.rect.height,
+          );
           await flyBookToStage(book, origin, targetRect);
           if (myToken !== token) return; // navigated away mid-flight
           cleanup = initDetailScene(shell, book);
