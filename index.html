@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Craft &mdash; An Interactive Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;1,400&family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="mark">&#9670;</div>
+        <nav class="topnav">
+          <a href="#" class="active">Craft Press</a>
+        </nav>
+      </header>
+
+      <main class="layout">
+        <div class="stage" id="stage">
+          <canvas id="scene"></canvas>
+          <div class="stage-hint">drag to tilt</div>
+        </div>
+
+        <div class="copy">
+          <p class="kicker">A three.js study</p>
+          <h1>
+            Built&nbsp;to<br />
+            <em>Render</em>
+          </h1>
+          <p class="byline">An interactive book, rebuilt from first principles</p>
+          <hr />
+          <p>
+            This is an original recreation of the interactive book renderer
+            seen on Stripe Press &mdash; not a copy of their artwork or copy,
+            but the same underlying technique: a real 3D book mesh, a
+            procedurally generated foil-stamped cover, image-based lighting
+            for gold reflections, and a subtle pointer-driven tilt that
+            follows your cursor.
+          </p>
+          <p>
+            Every marbled pattern is generated at load time by a small flow
+            field noise algorithm, then split into a diffuse layer, a bump
+            layer, and a metallic &ldquo;foil&rdquo; mask &mdash; the same
+            layering a real foil-stamped hardcover uses, just simulated in a
+            shader instead of etched in copper.
+          </p>
+          <button id="regenerate" class="btn">Reshuffle cover</button>
+        </div>
+      </main>
+
+      <footer class="foot">
+        <span>Built with three.js &middot; procedural textures &middot; no external assets</span>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
