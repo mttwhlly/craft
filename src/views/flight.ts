@@ -4,16 +4,16 @@ import type { Book } from "../data/books";
 import { createBookMesh, BOOK_DIMS, REST_ROTATION } from "../bookMesh";
 
 const DURATION = 780;
-// Tilted so the book reads as a foreshortened spine-like bar at the start —
-// matching the shelf's flat spine bars — before rotating up into the resting
-// 3/4 view that shows the front cover. Kept under ~0.785 (45°) on purpose:
-// past that point the top face (pages) becomes more camera-facing than the
-// front cover, which reads as the book flashing open to show its page edge
-// instead of smoothly opening from spine to cover. Y starts at 0 (not
-// REST_ROTATION.y): combining a large X tilt with *any* nonzero Y produces an
-// apparent diagonal roll under Euler composition, so the yaw is introduced
-// gradually as the tilt eases off, not held constant through it.
-const START_ROTATION = { x: 0.6, y: 0 };
+// The X tilt never leaves REST_ROTATION.x: any larger tilt turns the top
+// (pages) face toward the camera — even a moderate tilt lets a visible white
+// wedge of it leak into view, which reads as the book flashing open to its
+// page edge instead of swinging smoothly from spine to cover. The "reads as
+// a flat spine bar" start pose instead comes from squashing the mesh's own
+// height via non-uniform scale (see startExtents/scale below), which can't
+// expose a face that a rotation change would. Y starts at 0 — dead-on to the
+// cover, like the shelf's flat spine bars — and opens to REST_ROTATION.y
+// over the course of the flight.
+const START_ROTATION_X = REST_ROTATION.x;
 
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -74,19 +74,23 @@ export function flyBookToStage(book: Book, originRect: DOMRect, targetRect: DOMR
     }
 
     /**
-     * Projected pixel width of the mesh's screen-space bounding box, at scale 1,
-     * for fitting the start size. Measured across all 8 box corners (not just
-     * the mid-height/mid-depth line) because at the steep START_ROTATION tilt,
-     * the top/bottom edges swing far forward/back in Z, so perspective makes
-     * them noticeably wider or narrower on screen than that center line alone.
+     * Projected pixel width/height of the mesh's screen-space bounding box, at
+     * scale 1, for fitting the start size. Measured across all 8 box corners
+     * (not just a mid-line) because perspective makes the near/far edges
+     * noticeably wider or narrower on screen than a flat measurement would.
      */
-    function projectedWidthAt(pos: THREE.Vector3, rot: { x: number; y: number }): number {
+    function projectedExtentsAt(
+      pos: THREE.Vector3,
+      rot: { x: number; y: number },
+    ): { w: number; h: number } {
       mesh.position.copy(pos);
       mesh.rotation.set(rot.x, rot.y, 0);
       mesh.scale.setScalar(1);
       mesh.updateMatrixWorld(true);
       let minX = Infinity;
       let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
       for (const sx of [-1, 1]) {
         for (const sy of [-1, 1]) {
           for (const sz of [-1, 1]) {
@@ -99,10 +103,12 @@ export function flyBookToStage(book: Book, originRect: DOMRect, targetRect: DOMR
               .project(camera);
             minX = Math.min(minX, corner.x);
             maxX = Math.max(maxX, corner.x);
+            minY = Math.min(minY, corner.y);
+            maxY = Math.max(maxY, corner.y);
           }
         }
       }
-      return ((maxX - minX) / 2) * w;
+      return { w: ((maxX - minX) / 2) * w, h: ((maxY - minY) / 2) * h };
     }
 
     const startPos = screenToWorld(
@@ -114,8 +120,14 @@ export function flyBookToStage(book: Book, originRect: DOMRect, targetRect: DOMR
       targetRect.top + targetRect.height / 2,
     );
 
-    const startRefWidth = projectedWidthAt(startPos, START_ROTATION);
-    const startScale = (originRect.width * 0.96) / startRefWidth;
+    // Fit width and height independently against the (typically wide, short)
+    // origin rect — the mesh starts squashed on Y to match that flat aspect,
+    // then un-squashes back to uniform scale as it flies. This is what reads
+    // as "a flat spine bar" at the start, without ever tilting the box (see
+    // the note above on why tilting is the wrong tool for that job).
+    const startExtents = projectedExtentsAt(startPos, { x: START_ROTATION_X, y: 0 });
+    const startScaleX = (originRect.width * 0.96) / startExtents.w;
+    const startScaleY = (originRect.height * 0.96) / startExtents.h;
     // Same camera fov/position/z-plane in both scenes, so matching physical
     // pixel height only needs the ratio of the two canvases' viewport heights.
     const endScale = targetRect.height / h;
@@ -127,13 +139,13 @@ export function flyBookToStage(book: Book, originRect: DOMRect, targetRect: DOMR
       const e = easeInOutCubic(t);
 
       const pos = startPos.clone().lerp(endPos, e);
-      const rotX = THREE.MathUtils.lerp(START_ROTATION.x, REST_ROTATION.x, e);
-      const rotY = THREE.MathUtils.lerp(START_ROTATION.y, REST_ROTATION.y, e);
-      const scale = THREE.MathUtils.lerp(startScale, endScale, e);
+      const rotY = THREE.MathUtils.lerp(0, REST_ROTATION.y, e);
+      const scaleX = THREE.MathUtils.lerp(startScaleX, endScale, e);
+      const scaleY = THREE.MathUtils.lerp(startScaleY, endScale, e);
 
       mesh.position.copy(pos);
-      mesh.rotation.set(rotX, rotY, 0);
-      mesh.scale.setScalar(scale);
+      mesh.rotation.set(START_ROTATION_X, rotY, 0);
+      mesh.scale.set(scaleX, scaleY, scaleX);
 
       renderer.render(scene, camera);
 
