@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Book } from "./data/books";
+import type { Book } from "./books";
 import { generateCover, pagesTexture, toTexture } from "./cover";
 
 export const BOOK_DIMS = { width: 2.6, height: 3.4, depth: 0.46 };

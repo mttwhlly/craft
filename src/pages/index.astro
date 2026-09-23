@@ -1,0 +1,27 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../layouts/Base.astro";
+
+const projects = (await getCollection("projects")).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+---
+
+<Base title="Workbench" mainClass="layout layout-workbench">
+  <div class="shelf-intro">
+    <p class="kicker">Workbench</p>
+    <h1>Prototypes, one idea per page</h1>
+    <p class="byline">A small standing rig for shipping conceptual builds fast.</p>
+  </div>
+
+  <ol class="project-list">
+    {projects.map((project) => (
+      <li>
+        <a class="project-card" href={project.data.href}>
+          <h2>{project.data.title}</h2>
+          <p>{project.data.description}</p>
+        </a>
+      </li>
+    ))}
+  </ol>
+</Base>

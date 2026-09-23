@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import type { Book } from "../data/books";
-import { createBookMesh, BOOK_DIMS, REST_ROTATION } from "../bookMesh";
+import type { Book } from "./books";
+import { createBookMesh, BOOK_DIMS, REST_ROTATION } from "./bookMesh";
 
 const DURATION = 780;
 // The X tilt never leaves REST_ROTATION.x: any larger tilt turns the top

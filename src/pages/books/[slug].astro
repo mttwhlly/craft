@@ -1,0 +1,70 @@
+---
+import Base from "../../layouts/Base.astro";
+import { BOOKS } from "../../lib/books";
+
+export function getStaticPaths() {
+  return BOOKS.map((book) => ({ params: { slug: book.slug }, props: { book } }));
+}
+
+const { book } = Astro.props;
+const number = String(BOOKS.findIndex((b) => b.slug === book.slug) + 1).padStart(2, "0");
+---
+
+<Base title={`${book.title} — Craft Press`} back={{ href: "/books", label: "Shelf" }}>
+  <div class="stage" id="stage" data-slug={book.slug}>
+    <canvas id="scene"></canvas>
+    <div class="stage-hint">drag to tilt</div>
+  </div>
+  <div class="copy copy-hidden" id="copy">
+    <p class="kicker">Craft Press &middot; No. {number}</p>
+    <h1>{book.title}</h1>
+    <p class="byline">{book.author}</p>
+    <hr />
+    <p>
+      This cover is generated, not scanned: a seeded flow-field pattern,
+      a foil-stamped title with its own bump and metalness layers, and a
+      real 3D book mesh lit with image-based reflections. Drag it, or
+      reshuffle for a different take on the same title.
+    </p>
+    <p class="fineprint">
+      Title and author as listed on Stripe Press &mdash; the artwork
+      itself is an original procedural interpretation, not the real cover.
+    </p>
+    <button id="regenerate" class="btn">Reshuffle cover</button>
+  </div>
+</Base>
+
+<script>
+  import { findBook } from "../../lib/books";
+  import { takePendingOrigin } from "../../lib/nav";
+  import { flyBookToStage } from "../../lib/flight";
+  import { queryDetailShell, initDetailScene, revealCopy } from "../../lib/detailScene";
+
+  function boot() {
+    const stage = document.getElementById("stage") as HTMLDivElement | null;
+    if (!stage) return;
+    const slug = stage.dataset.slug;
+    const book = slug && findBook(slug);
+    if (!book) return;
+
+    const shell = queryDetailShell();
+    const origin = takePendingOrigin(book.slug);
+
+    let dispose: (() => void) | undefined;
+
+    if (origin) {
+      const targetRect = shell.stage.getBoundingClientRect();
+      flyBookToStage(book, origin, targetRect).then(() => {
+        dispose = initDetailScene(shell, book);
+        revealCopy(shell.copy);
+      });
+    } else {
+      dispose = initDetailScene(shell, book);
+      revealCopy(shell.copy);
+    }
+
+    document.addEventListener("astro:before-swap", () => dispose?.(), { once: true });
+  }
+
+  boot();
+</script>

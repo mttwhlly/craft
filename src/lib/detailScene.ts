@@ -1,52 +1,22 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { BOOKS, type Book } from "../data/books";
-import { createBookMesh, REST_ROTATION } from "../bookMesh";
+import type { Book } from "./books";
+import { createBookMesh, REST_ROTATION } from "./bookMesh";
 
 export interface DetailShell {
   stage: HTMLDivElement;
   canvas: HTMLCanvasElement;
   reshuffleBtn: HTMLButtonElement;
-  copy: HTMLDivElement;
+  copy: HTMLElement;
 }
 
-/** Mounts the detail view's DOM only — no WebGL yet. Lets callers measure `.stage` before the scene spins up. */
-export function mountDetailShell(
-  container: HTMLElement,
-  book: Book,
-  opts: { fadeInCopy?: boolean } = {},
-): DetailShell {
-  container.innerHTML = `
-    <div class="stage" id="stage">
-      <canvas id="scene"></canvas>
-      <div class="stage-hint">drag to tilt</div>
-    </div>
-    <div class="copy${opts.fadeInCopy ? " copy-hidden" : ""}" id="copy">
-      <p class="kicker">Craft Press &middot; No. ${String(
-        BOOKS.findIndex((b) => b.slug === book.slug) + 1,
-      ).padStart(2, "0")}</p>
-      <h1>${escapeHtml(book.title)}</h1>
-      <p class="byline">${escapeHtml(book.author)}</p>
-      <hr />
-      <p>
-        This cover is generated, not scanned: a seeded flow-field pattern,
-        a foil-stamped title with its own bump and metalness layers, and a
-        real 3D book mesh lit with image-based reflections. Drag it, or
-        reshuffle for a different take on the same title.
-      </p>
-      <p class="fineprint">
-        Title and author as listed on Stripe Press &mdash; the artwork
-        itself is an original procedural interpretation, not the real cover.
-      </p>
-      <button id="regenerate" class="btn">Reshuffle cover</button>
-    </div>
-  `;
-
+/** Reads the detail page's already-rendered markup (Astro owns the HTML/copy templating). */
+export function queryDetailShell(root: ParentNode = document): DetailShell {
   return {
-    stage: container.querySelector("#stage") as HTMLDivElement,
-    canvas: container.querySelector("#scene") as HTMLCanvasElement,
-    reshuffleBtn: container.querySelector("#regenerate") as HTMLButtonElement,
-    copy: container.querySelector("#copy") as HTMLDivElement,
+    stage: root.querySelector("#stage") as HTMLDivElement,
+    canvas: root.querySelector("#scene") as HTMLCanvasElement,
+    reshuffleBtn: root.querySelector("#regenerate") as HTMLButtonElement,
+    copy: root.querySelector("#copy") as HTMLElement,
   };
 }
 
@@ -186,17 +156,4 @@ export function initDetailScene(shell: DetailShell, book: Book): () => void {
     pmrem.dispose();
     renderer.dispose();
   };
-}
-
-/** Convenience: mount + boot in one call, for direct loads / back-forward nav with no flight animation. */
-export function renderDetail(container: HTMLElement, book: Book): () => void {
-  const shell = mountDetailShell(container, book);
-  return initDetailScene(shell, book);
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
-  );
 }
