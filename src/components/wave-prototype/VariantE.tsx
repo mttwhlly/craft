@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import type { Conditions } from "./types";
+import { useEffect, useRef } from 'react';
+import type { Conditions } from './types';
 
 // Simple longitudinal-wave diagram: a grid of dots displaced along the
 // direction of travel (default straight down, top to bottom), bunching into
@@ -15,7 +15,7 @@ export default function VariantE({ conditions }: { conditions: Conditions }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     let raf = 0;
@@ -27,7 +27,7 @@ export default function VariantE({ conditions }: { conditions: Conditions }) {
       canvas.height = canvas.clientHeight * devicePixelRatio;
     };
     resize();
-    window.addEventListener("resize", resize);
+    window.addEventListener('resize', resize);
 
     const draw = (now: number) => {
       const dt = Math.min((now - last) / 1000, 0.05);
@@ -40,8 +40,8 @@ export default function VariantE({ conditions }: { conditions: Conditions }) {
       const h = canvas.height;
 
       const bg = ctx.createLinearGradient(0, 0, 0, h);
-      bg.addColorStop(0, "#1c1a24");
-      bg.addColorStop(1, "#151320");
+      bg.addColorStop(0, '#1c1a24');
+      bg.addColorStop(1, '#151320');
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, w, h);
 
@@ -75,7 +75,12 @@ export default function VariantE({ conditions }: { conditions: Conditions }) {
           const disp = ampPx * Math.sin(phase);
           const x = x0 + disp * dx;
           const y = y0 + disp * dy;
-          if (x < -spacing || x > w + spacing || y < -spacing || y > h + spacing)
+          if (
+            x < -spacing ||
+            x > w + spacing ||
+            y < -spacing ||
+            y > h + spacing
+          )
             continue;
 
           const compression = (1 + Math.cos(phase)) / 2; // 0 = spread, 1 = bunched
@@ -83,7 +88,7 @@ export default function VariantE({ conditions }: { conditions: Conditions }) {
           const brightness = 0.35 + compression * 0.5;
           ctx.beginPath();
           ctx.arc(x, y, radius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(203, 163, 96, ${brightness.toFixed(2)})`;
+          ctx.fillStyle = `rgba(255, 255, 255, ${brightness.toFixed(2)})`;
           ctx.fill();
         }
       }
@@ -94,7 +99,7 @@ export default function VariantE({ conditions }: { conditions: Conditions }) {
     raf = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener('resize', resize);
     };
   }, []);
 
@@ -111,8 +116,8 @@ export default function VariantE({ conditions }: { conditions: Conditions }) {
           style={{ transform: `rotate(${conditions.directionDeg}deg)` }}
         />
         <span className="wp-readout-text">
-          {conditions.directionDeg}&deg; &middot; {conditions.periodS.toFixed(1)}s
-          period
+          {conditions.directionDeg}&deg; &middot;{' '}
+          {conditions.periodS.toFixed(1)}s period
         </span>
       </div>
       <div className="wp-caption">

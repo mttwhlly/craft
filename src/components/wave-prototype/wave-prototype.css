@@ -62,7 +62,7 @@
   color: var(--ink-dim);
 }
 
-.wp-field input[type="range"] {
+.wp-field input[type='range'] {
   accent-color: var(--gold);
 }
 
@@ -110,12 +110,7 @@
 }
 
 .wp-stage-e {
-  background: linear-gradient(
-    to bottom,
-    #1c1a24 0%,
-    #221f2c 38%,
-    #17151f 100%
-  );
+  background: linear-gradient(to bottom, #1c1a24 0%, #221f2c 38%, #17151f 100%);
 }
 
 .wp-tilt-wrap {
@@ -130,7 +125,7 @@
   inset: 0;
   transform-style: preserve-3d;
   transform-origin: 50% 100%;
-  transform: rotateX(58deg);
+  transform: rotateX(75deg);
 }
 
 .wp-stage-e .wp-canvas {
